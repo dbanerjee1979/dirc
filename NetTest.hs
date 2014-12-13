@@ -27,42 +27,41 @@ main = do
     putStrLn $ foo
     sClose s
 -}
-    let s = C.pack ":arcor.de.eu.dal.net NOTICE AUTH :*** Looking up your hostname...\r\n"
+    let s = ":arcor.de.eu.dal.net NOTICE AUTH :*** Looking up your hostname...\r\n"
     putStrLn $ show $ parse s
-    let s2 = C.pack ":arcor.de.eu.dal.net NOTICE AUTH\r\n"
+    let s2 = ":arcor.de.eu.dal.net NOTICE AUTH\r\n"
     putStrLn $ show $ parse s2
-    let s3 = C.pack "NOTICE AUTH\r\n"
+    let s3 = "NOTICE AUTH\r\n"
     putStrLn $ show $ parse s3
-    let s4 = C.pack "NOTICE\r\n"
+    let s4 = "NOTICE\r\n"
     putStrLn $ show $ parse s4
 
 data ParseState = Start | Name | Code | Param | ParamM | ParamT
 data ValueType = One String | Many [String]
 
-parse :: B.ByteString -> Maybe Message
-parse s    
-    | B.null s  = Nothing
-    | otherwise = build Start (C.head s) (B.tail s) "" $ Map.fromList [("params", (Many []))]
+parse :: String -> Maybe Message
+parse []  = Nothing    
+parse m  = build Start m "" $ Map.fromList [("params", (Many []))]
 
-build :: ParseState -> Char -> B.ByteString -> String -> Map.Map String ValueType -> Maybe Message
-build Start  ':'  cs value values        = build Name (C.head cs) (B.tail cs) "" values
-build Start  c    cs value values        = build Code (C.head cs) (B.tail cs) [c] values
-build Name   ' '  cs value values        = build Code (C.head cs) (B.tail cs) "" $ appendSender value values
-build Name   c    cs value values        = build Name (C.head cs) (B.tail cs) (value ++ [c]) values
-build Code   ' '  cs value values        = build Param (C.head cs) (B.tail cs) "" $ appendCode value values
-build Code   '\r' cs value values        = makeMessage $ appendCode value values
-build Code   '\n' cs value values        = makeMessage $ appendCode value values
-build Code   c    cs value values        = build Code (C.head cs) (B.tail cs) (value ++ [c]) values
-build Param  ':'  cs value values        = build ParamT (C.head cs) (B.tail cs) "" values 
-build Param  c    cs value values        = build ParamM (C.head cs) (B.tail cs) [c] values
-build ParamT '\r' cs value values        = makeMessageParams value values
-build ParamT '\n' cs value values        = makeMessageParams value values
-build ParamT c    cs value values        = build ParamT (C.head cs) (B.tail cs) (value ++ [c]) values
-build ParamM ' '  cs value values        = build Param (C.head cs) (B.tail cs) "" (appendParams value values)
-build ParamM '\r' cs value values        = makeMessageParams value values
-build ParamM '\n' cs value values        = makeMessageParams value values
-build ParamM c    cs value values        = build ParamM (C.head cs) (B.tail cs) (value ++ [c]) values
-build _      _    _  _     _             = Nothing
+build :: ParseState -> String -> String -> Map.Map String ValueType -> Maybe Message
+build Start  (':':cs)  value values        = build Name cs "" values
+build Start  (c:cs)    value values        = build Code cs [c] values
+build Name   (' ':cs)  value values        = build Code cs "" $ appendSender value values
+build Name   (c:cs)    value values        = build Name cs (value ++ [c]) values
+build Code   (' ':cs)  value values        = build Param cs "" $ appendCode value values
+build Code   ('\r':cs) value values        = makeMessage $ appendCode value values
+build Code   ('\n':cs) value values        = makeMessage $ appendCode value values
+build Code   (c:cs)    value values        = build Code cs (value ++ [c]) values
+build Param  (':':cs)  value values        = build ParamT cs "" values 
+build Param  (c:cs)    value values        = build ParamM cs [c] values
+build ParamT ('\r':cs) value values        = makeMessageParams value values
+build ParamT ('\n':cs) value values        = makeMessageParams value values
+build ParamT (c:cs)    value values        = build ParamT cs (value ++ [c]) values
+build ParamM (' ':cs)  value values        = build Param cs "" (appendParams value values)
+build ParamM ('\r':cs) value values        = makeMessageParams value values
+build ParamM ('\n':cs) value values        = makeMessageParams value values
+build ParamM (c:cs)    value values        = build ParamM cs (value ++ [c]) values
+build _      _         _     _             = Nothing
 
 appendSender:: String -> Map.Map String ValueType -> Map.Map String ValueType
 appendSender value values = Map.insert "sender" (One value) values
