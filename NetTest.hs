@@ -40,7 +40,7 @@ data ParseState = Start | Name | Code | Param | ParamM | ParamT
 data ValueType = One String | Many [String]
 
 parse :: String -> Maybe Message
-parse []  = Nothing    
+parse [] = Nothing    
 parse m  = build Start m "" $ Map.fromList [("params", (Many []))]
 
 build :: ParseState -> String -> String -> Map.Map String ValueType -> Maybe Message
