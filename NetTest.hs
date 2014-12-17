@@ -1,31 +1,29 @@
 import Network.Socket hiding (recv)
-
 import System.IO
-import IrcMessage
+import IrcMessage as M
 
 main :: IO ()
 main = do
-{-
     a <- address "irc.dal.net" 7000
+    putStrLn $ show a
     s <- socket (addrFamily a) (addrSocketType a) (addrProtocol a)
     connect s (addrAddress a)
     h <- socketToHandle s ReadWriteMode
     hSetBuffering h NoBuffering
     l <- hGetLine h
-    putStrLn $ show l
+    putStrLn $ show $ M.parse l
+    hPutStr h "NICK dbanerjee1979\r\n" 
+    hPutStr h "USER guest localhost irc.dal.net :Joe\r\n" 
+    hFlush h
+    l2 <- hGetLine h
+    putStrLn $ show $ M.parse l2
+    l3 <- hGetLine h
+    putStrLn $ show $ M.parse l3
+    l4 <- hGetLine h
+    putStrLn $ show $ M.parse l4
+    l5 <- hGetLine h
+    putStrLn $ show $ M.parse l5
     hClose h
-    msg <- recv s 1024
-    putStrLn $ foo
-    sClose s
--}
-    let s = ":arcor.de.eu.dal.net NOTICE AUTH :*** Looking up your hostname...\r\n"
-    putStrLn $ show $ parse s
-    let s2 = ":arcor.de.eu.dal.net NOTICE AUTH\r\n"
-    putStrLn $ show $ parse s2
-    let s3 = "NOTICE AUTH\r\n"
-    putStrLn $ show $ parse s3
-    let s4 = "NOTICE\r\n"
-    putStrLn $ show $ parse s4
 
 address :: String -> Int -> IO AddrInfo
 address hostname port = do
