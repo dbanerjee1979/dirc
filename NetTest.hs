@@ -1,9 +1,18 @@
 import Network.Socket hiding (recv)
 import System.IO
+import Control.Concurrent
 import IrcMessage as M
 
 main :: IO ()
 main = do
+    mvar <- newEmptyMVar
+    forkFinally connTest (\_ -> putMVar mvar "Done!") 
+    putStrLn "Waiting..."
+    msg <- takeMVar mvar
+    putStrLn msg
+
+connTest :: IO ()
+connTest = do
     a <- address "irc.dal.net" 7000
     putStrLn $ show a
     s <- socket (addrFamily a) (addrSocketType a) (addrProtocol a)
