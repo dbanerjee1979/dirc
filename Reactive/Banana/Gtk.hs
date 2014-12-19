@@ -1,3 +1,9 @@
+{-
+    Adapted from reactive-banana-gtk (https://github.com/emonkak/reactive-banana-gtk). Last updated 3 years ago!
+
+    The original code seems to have been written for an older version of the reactive-banana library. This module
+    translates the original code to the current version of reactive-banana (0.8.0.2)
+-}
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Reactive.Banana.Gtk (Prop'(..)
