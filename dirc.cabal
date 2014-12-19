@@ -16,12 +16,14 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 executable dirc
-  main-is:             NetTest.hs
+  main-is:             GuiTest.hs
   default-language:    Haskell2010
   -- other-modules:       
-  build-depends:       base ==4.6.*,
-                       network >= 2.6,
-                       gtk3 == 0.13.3,
-                       mtl == 2.2.1,
-                       bytestring == 0.10.0.2,
-                       containers == 0.5.5.1
+  build-depends:       base,
+                       network,
+                       gtk3,
+                       glib,
+                       mtl,
+                       bytestring,
+                       containers,
+                       reactive-banana
