@@ -1,7 +1,17 @@
+{-
+ - Module to parse and generate IRC command messages
+ -
+ - This module parses and generates IRC command message strings according to the specification in the RFC
+ -
+ -     https://tools.ietf.org/html/rfc2812#section-2.3
+ -
+ - through Message, a data structure representing the contents of the message.
+ -}
 module IrcMessage
     (
       Message(..)
     , parse
+    , generate
     ) where
 
 data Message = Message { sender   :: Maybe String
@@ -12,6 +22,9 @@ data Message = Message { sender   :: Maybe String
 data ParseState = Start | Prefix | Cmd | ParamS | ParamM | ParamT
 data ParseToken = Sender String | Command String | Param String
                   deriving (Show)
+
+generate :: Message -> String
+generate m = "Unimplemented"
 
 parse :: String -> Maybe Message
 parse msg = case (parseM Start msg "") of
@@ -28,15 +41,21 @@ parse msg = case (parseM Start msg "") of
 
 parseM :: ParseState -> [Char] -> [Char] -> [ParseToken]
 parseM Start (':':cs) accum = parseM Prefix cs ""
+
 parseM Prefix (' ':cs) accum = (Sender accum:parseM Cmd cs "")
 parseM Prefix (c:cs) accum = parseM Prefix cs $ accum ++ [c]
+
 parseM Cmd (' ':cs) accum = (Command accum:parseM ParamS cs "")
 parseM Cmd (c:cs) accum = parseM Cmd cs $ accum ++ [c]
+
 parseM ParamS (':':cs) accum = parseM ParamT cs ""
 parseM ParamS (c:cs) accum = parseM ParamM cs [c]
+
 parseM ParamM (' ':cs) accum = (Param accum:parseM ParamS cs "")
 parseM ParamM (c:cs) accum = parseM ParamM cs $ accum ++ [c]
+
 parseM ParamT [] accum = [Param accum]
 parseM ParamT ('\r':cs) accum = [Param accum]
 parseM ParamT (c:cs) accum = parseM ParamT cs $ accum ++ [c]
+
 parseM _ _ _ = []
