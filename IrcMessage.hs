@@ -24,12 +24,7 @@ parse msg = case (parseM Start msg "") of
                                             , params = paramList ps
                                             }
     _ ->                       Nothing
-
-
-paramList :: [ParseToken] -> [String]
-paramList (Param p:ps) = (p:paramList ps)
-paramList (_:ps) = paramList ps
-paramList [] = []
+    where paramList ps = [ p | Param p <- ps ]
 
 parseM :: ParseState -> [Char] -> [Char] -> [ParseToken]
 parseM Start (':':cs) accum = parseM Prefix cs ""
