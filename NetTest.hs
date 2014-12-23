@@ -1,7 +1,11 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 import Network.Socket hiding (recv)
 import System.IO
 import Control.Concurrent
 import IrcMessage as M
+import Reactive.Banana as R
+import Reactive.Banana.Frameworks as R
 
 main :: IO ()
 main = do
@@ -11,30 +15,48 @@ main = do
     connect s (addrAddress a)
     h <- socketToHandle s ReadWriteMode
     hSetBuffering h NoBuffering
-    rchan <- newChan
-    forkIO (reader h rchan)
-    m <- readChan rchan
-    putStrLn $ show m
-    hPutStr h "NICK dbanerjee1979\r\n" 
-    hPutStr h "USER guest localhost irc.dal.net :Joe\r\n" 
-    readLoop rchan
 
-readLoop rchan = do
-    m <- readChan rchan  
-    putStrLn $ show m
-    readLoop rchan
+    esmsg <- newAddHandler
+    network <- compile $ setupNetwork (esmsg)
+    actuate network
 
-reader :: Handle -> Chan Message -> IO ()
-reader h rchan = do
-    loop h rchan
+    forkIO (reader h esmsg)
+    readLoop h
+
+type EventSource a = (AddHandler a, a -> IO ())
+
+addHandler :: EventSource a -> AddHandler a
+addHandler = fst
+
+fire :: EventSource a -> a -> IO ()
+fire = snd
+
+handleMsg :: Message -> IO ()
+handleMsg msg = do
+    putStrLn $ show msg
+
+setupNetwork :: forall t. Frameworks t => (EventSource Message) -> Moment t ()
+setupNetwork (esmsg) = do
+    emsg <- fromAddHandler (addHandler esmsg)
+    reactimate $ handleMsg <$> emsg 
+
+readLoop h = do
+    l <- getLine
+    hPutStr h l
+    hPutStr h "\r\n"
+    readLoop h
+
+reader :: Handle -> EventSource Message -> IO ()
+reader h esmsg = do
+    loop h esmsg
     hClose h
 
-loop h rchan = do
+loop h esmsg = do
     l <- hGetLine h
     case M.parse l of
         Nothing -> putStrLn $ "Unable to parse response " ++ l
-        Just m -> writeChan rchan m
-    loop h rchan
+        Just m -> fire esmsg m
+    loop h esmsg
 
 address :: String -> Int -> IO AddrInfo
 address hostname port = do
