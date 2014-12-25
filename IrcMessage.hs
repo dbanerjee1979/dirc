@@ -15,42 +15,69 @@ module IrcMessage
     ) where
 
 import Data.Maybe
+import Data.List
 
-data Message = Message { sender   :: Maybe String
-                       , command  :: String
-                       , params   :: [String]
-                       } deriving (Show)
+data Message = Nick { nickname :: String }
+               | User           { username :: String, modeMask :: Int, realname :: String }
+               | Notice         { sender :: Maybe String, target :: String, text :: String }
+               | Mode           { sender :: Maybe String, nickname :: String, mode :: String }
+               | Generic        { sender :: Maybe String, target :: String, text :: String }
+               | Welcome        { sender :: Maybe String, target :: String, text :: String }
+               | YourHost       { sender :: Maybe String, target :: String, text :: String }
+               | Created        { sender :: Maybe String, target :: String, text :: String }
+               | MyInfo         { sender :: Maybe String, target :: String, server :: String, version :: String, availUserModes :: String, availChanModes :: String }
+               | Bounce         { sender :: Maybe String, target :: String, text :: String }
+               | UserClient     { sender :: Maybe String, target :: String, text :: String }
+               | UserOps        { sender :: Maybe String, target :: String, cnt :: Int, text :: String }
+               | UserUnk        { sender :: Maybe String, target :: String, cnt :: Int, text :: String }
+               | UserChan       { sender :: Maybe String, target :: String, cnt :: Int, text :: String }
+               | UserMe         { sender :: Maybe String, target :: String, text :: String }
+               | MotDStart      { sender :: Maybe String, target :: String, text :: String }
+               | MotD           { sender :: Maybe String, target :: String, text :: String }
+               | MotDEnd        { sender :: Maybe String, target :: String, text :: String }
+               | MotDNone       { sender :: Maybe String, target :: String, text :: String }
+               deriving (Show)
 
 data ParseState = Start | Prefix | Cmd | ParamS | ParamM | ParamT
 data ParseToken = Sender String | Command String | Param String
                   deriving (Show)
 
 generate :: Message -> String
-generate Message { sender = s, command = c, params = ps } =
-    prefix ++ command ++ params ++ "\r\n"
-    where prefix = maybe "" (\x -> ":" ++ x ++ " ") s
-          command = c
-          params = paramStr ps
+generate (Nick nickname)                 = makeMsg ["NICK", nickname]
+generate (User user modeMask realname)   = makeMsg ["USER", user, (show modeMask), "*", realname]
 
-paramStr :: [String] -> String
-paramStr [] = ""
-paramStr (p:[]) = " :" ++ p
-paramStr (p:ps) = " " ++ p ++ paramStr ps
+makeMsg :: [String] -> String
+makeMsg (midP:termP:[]) = midP ++ " :" ++ termP ++ "\r\n"
+makeMsg (p:[]) = p ++ "\r\n"
+makeMsg (p:ps) = p ++ " " ++ makeMsg ps
+
+paramT :: String -> String
+paramT p = ":" ++ p
 
 parse :: String -> Maybe Message
 parse msg = case (parseM Start msg "") of
-    (Sender s:Command c:ps) -> Just Message { sender = Just s
-                                            , command = c
-                                            , params = paramList ps
-                                            }
-    (Command c:ps) ->          Just Message { sender = Nothing
-                                            , command = c
-                                            , params = paramList ps
-                                            }
-    _ ->                       Nothing
-    where paramList ps = [ p | Param p <- ps ]
+    (Sender s:Command "NOTICE":Param target:Param text:[])                 -> Just $ Notice         { sender = (Just s), target = target, text = text }
+    (Sender s:Command   "MODE":Param nickname:Param mode:[])               -> Just $ Mode           { sender = (Just s), nickname = nickname, mode = mode }
+    (Sender s:Command    "001":Param target:Param text:[])                 -> Just $ Welcome        { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "002":Param target:Param text:[])                 -> Just $ YourHost       { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "003":Param target:Param text:[])                 -> Just $ Created        { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "004":Param target:Param servername
+                              :Param version:Param availUserModes
+                              :Param availChanModes:[])                    -> Just $ MyInfo         { sender = (Just s), target = target, server = servername, version = version
+                                                                                                    , availUserModes = availUserModes, availChanModes = availChanModes
+                                                                                                    }
+    (Sender s:Command    "005":Param target:Param text:[])                 -> Just $ Bounce         { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "251":Param target:Param text:[])                 -> Just $ Generic        { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "252":Param target:Param cnt:Param text:[])       -> Just $ Generic        { sender = (Just s), target = target, text = cnt ++ " " ++ text }
+    (Sender s:Command    "253":Param target:Param cnt:Param text:[])       -> Just $ Generic        { sender = (Just s), target = target, text = cnt ++ " " ++ text }
+    (Sender s:Command    "254":Param target:Param cnt:Param text:[])       -> Just $ Generic        { sender = (Just s), target = target, text = cnt ++ " " ++ text }
+    (Sender s:Command    "255":Param target:Param text:[])                 -> Just $ Generic        { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "375":Param target:Param text:[])                 -> Just $ MotDStart      { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "372":Param target:Param text:[])                 -> Just $ MotD           { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "376":Param target:Param text:[])                 -> Just $ MotDEnd        { sender = (Just s), target = target, text = text }
+    (Sender s:Command    "422":Param target:Param text:[])                 -> Just $ MotDNone       { sender = (Just s), target = target, text = text }
+    _                                                                      -> Nothing
 
-parseM :: ParseState -> [Char] -> [Char] -> [ParseToken]
 
 -- Parse prefix (if present) - from ':' to space
 parseM Start (':':cs) accum = parseM Prefix cs ""

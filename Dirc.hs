@@ -48,8 +48,8 @@ main = do
 
     sChan <- newChan
     S.startServer "irc.dal.net" 7000 esmsg sChan
-    writeChan sChan M.Message { sender = Nothing, command = "NICK", params = [ "dbanerjee1979" ] }
-    writeChan sChan M.Message { sender = Nothing, command = "USER", params = [ "guest", "0", "*", "Joe" ] }
+    writeChan sChan M.Nick { nickname = "dbanerjee1979" }
+    writeChan sChan M.User { username = "guest", modeMask = 0, realname = "Joe" }
 
     widgetShowAll dlg
     forkOS mainGUI
