@@ -64,10 +64,9 @@ handleMsg :: TextBufferClass self => self -> TextTag -> Message -> IO ()
 handleMsg buffer tag msg = do
     m <- textBufferGetInsert buffer
     i <- textBufferGetIterAtMark buffer m
-    o1 <- textIterGetOffset i
-    l <- textIterGetLine i
+    o <- textIterGetOffset i
     textBufferInsertAtCursor buffer $ show msg
     textBufferInsertAtCursor buffer "\n"
-    i1 <- textBufferGetIterAtOffset buffer o1
+    i1 <- textBufferGetIterAtOffset buffer o
     i2 <- textBufferGetIterAtMark buffer m
     textBufferApplyTag buffer tag i1 i2
