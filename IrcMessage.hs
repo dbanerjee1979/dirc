@@ -40,22 +40,31 @@ parse msg = case (parseM Start msg "") of
     where paramList ps = [ p | Param p <- ps ]
 
 parseM :: ParseState -> [Char] -> [Char] -> [ParseToken]
-parseM Start (':':cs) accum = parseM Prefix cs ""
 
+-- Parse prefix (if present) - from ':' to space
+parseM Start (':':cs) accum = parseM Prefix cs ""
 parseM Prefix (' ':cs) accum = (Sender accum:parseM Cmd cs "")
 parseM Prefix (c:cs) accum = parseM Prefix cs $ accum ++ [c]
 
+-- Parse command (after prefix - if present, or at start) - until space
+parseM Start (c:cs) accum = parseM Cmd cs [c]
 parseM Cmd (' ':cs) accum = (Command accum:parseM ParamS cs "")
 parseM Cmd (c:cs) accum = parseM Cmd cs $ accum ++ [c]
 
+-- Parse parameter - trailing parameter starts with ':', middle parameters starts with other character
 parseM ParamS (':':cs) accum = parseM ParamT cs ""
 parseM ParamS (c:cs) accum = parseM ParamM cs [c]
 
+-- Parse middle parameter, until space, end or carriage return
+parseM ParamM [] accum = [Param accum]
+parseM ParamM ('\r':cs) accum = [Param accum]
 parseM ParamM (' ':cs) accum = (Param accum:parseM ParamS cs "")
 parseM ParamM (c:cs) accum = parseM ParamM cs $ accum ++ [c]
 
+-- Parse trailing parameter, until end or carriage return
 parseM ParamT [] accum = [Param accum]
 parseM ParamT ('\r':cs) accum = [Param accum]
 parseM ParamT (c:cs) accum = parseM ParamT cs $ accum ++ [c]
 
+-- Invalid message (or unanticipated state) - terminate parse
 parseM _ _ _ = []
