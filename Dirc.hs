@@ -46,9 +46,10 @@ main = do
     network <- compile networkDescription
     actuate network
 
-    h <- S.startServer "irc.dal.net" 7000 esmsg
-    hPutStr h "NICK dbanerjee1979\r\n"
-    hPutStr h "USER guest 0 * :Joe\r\n"
+    sChan <- newChan
+    S.startServer "irc.dal.net" 7000 esmsg sChan
+    writeChan sChan M.Message { sender = Nothing, command = "NICK", params = [ "dbanerjee1979" ] }
+    writeChan sChan M.Message { sender = Nothing, command = "USER", params = [ "guest", "0", "*", "Joe" ] }
 
     widgetShowAll dlg
     forkOS mainGUI

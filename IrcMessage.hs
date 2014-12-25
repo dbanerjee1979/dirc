@@ -14,6 +14,8 @@ module IrcMessage
     , generate
     ) where
 
+import Data.Maybe
+
 data Message = Message { sender   :: Maybe String
                        , command  :: String
                        , params   :: [String]
@@ -24,7 +26,16 @@ data ParseToken = Sender String | Command String | Param String
                   deriving (Show)
 
 generate :: Message -> String
-generate m = "Unimplemented"
+generate Message { sender = s, command = c, params = ps } =
+    prefix ++ command ++ params ++ "\r\n"
+    where prefix = maybe "" (\x -> ":" ++ x ++ " ") s
+          command = c
+          params = paramStr ps
+
+paramStr :: [String] -> String
+paramStr [] = ""
+paramStr (p:[]) = " :" ++ p
+paramStr (p:ps) = " " ++ p ++ paramStr ps
 
 parse :: String -> Maybe Message
 parse msg = case (parseM Start msg "") of
