@@ -61,6 +61,19 @@ handleQuit exit = do
     putMVar exit ExitSuccess
 
 handleMsg :: TextBufferClass self => self -> TextTag -> Message -> IO ()
+handleMsg buffer tag (Notice sender "AUTH" text) = do
+    b <- pixbufNewFromFile "icon-auth.svg"
+    m <- textBufferGetInsert buffer
+    i <- textBufferGetIterAtMark buffer m
+    o <- textIterGetOffset i
+    textBufferInsertPixbuf buffer i b
+    textBufferInsertAtCursor buffer " "
+    textBufferInsertAtCursor buffer text
+    textBufferInsertAtCursor buffer "\n"
+    i1 <- textBufferGetIterAtOffset buffer o
+    i2 <- textBufferGetIterAtMark buffer m
+    textBufferApplyTag buffer tag i1 i2
+
 handleMsg buffer tag msg = do
     m <- textBufferGetInsert buffer
     i <- textBufferGetIterAtMark buffer m
