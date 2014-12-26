@@ -27,11 +27,6 @@ data Message = Nick { nickname :: String }
                | Created        { sender :: Maybe String, target :: String, text :: String }
                | MyInfo         { sender :: Maybe String, target :: String, server :: String, version :: String, availUserModes :: String, availChanModes :: String }
                | Bounce         { sender :: Maybe String, target :: String, text :: String }
-               | UserClient     { sender :: Maybe String, target :: String, text :: String }
-               | UserOps        { sender :: Maybe String, target :: String, cnt :: Int, text :: String }
-               | UserUnk        { sender :: Maybe String, target :: String, cnt :: Int, text :: String }
-               | UserChan       { sender :: Maybe String, target :: String, cnt :: Int, text :: String }
-               | UserMe         { sender :: Maybe String, target :: String, text :: String }
                | MotDStart      { sender :: Maybe String, target :: String, text :: String }
                | MotD           { sender :: Maybe String, target :: String, text :: String }
                | MotDEnd        { sender :: Maybe String, target :: String, text :: String }

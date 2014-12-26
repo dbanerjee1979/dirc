@@ -5,7 +5,7 @@ import System.IO
 import System.Exit
 import Control.Concurrent
 
-import Graphics.UI.Gtk as Gtk hiding (Event)
+import Graphics.UI.Gtk as Gtk hiding (Event, insertText)
 import Graphics.UI.Gtk.Builder
 
 import Reactive.Util
@@ -61,8 +61,26 @@ handleQuit exit = do
     putMVar exit ExitSuccess
 
 handleMsg :: TextBufferClass self => self -> TextTag -> Message -> IO ()
-handleMsg buffer tag (Notice sender "AUTH" text) = do
-    b <- pixbufNewFromFile "icon-auth.svg"
+handleMsg buffer tag (Notice sender "AUTH" text) = insertTextWithIcon buffer tag "icon-auth.svg" text
+handleMsg buffer tag (Notice sender nickname text) = insertTextWithIcon buffer tag "icon-info.svg" text
+handleMsg buffer tag (Generic sender nickname text) = insertText buffer tag text
+handleMsg buffer tag (Welcome sender nickname text) = insertText buffer tag text
+handleMsg buffer tag (YourHost sender nickname text) = insertText buffer tag text
+handleMsg buffer tag (Created sender nickname text) = insertText buffer tag text
+handleMsg buffer tag (MyInfo sender nickname server version availUserModes availChanModes) = return ()
+
+handleMsg buffer tag msg = do
+    m <- textBufferGetInsert buffer
+    i <- textBufferGetIterAtMark buffer m
+    o <- textIterGetOffset i
+    textBufferInsertAtCursor buffer $ show msg
+    textBufferInsertAtCursor buffer "\n"
+    i1 <- textBufferGetIterAtOffset buffer o
+    i2 <- textBufferGetIterAtMark buffer m
+    textBufferApplyTag buffer tag i1 i2
+
+insertTextWithIcon buffer tag icon text = do
+    b <- pixbufNewFromFile icon
     m <- textBufferGetInsert buffer
     i <- textBufferGetIterAtMark buffer m
     o <- textIterGetOffset i
@@ -74,11 +92,11 @@ handleMsg buffer tag (Notice sender "AUTH" text) = do
     i2 <- textBufferGetIterAtMark buffer m
     textBufferApplyTag buffer tag i1 i2
 
-handleMsg buffer tag msg = do
+insertText buffer tag text = do
     m <- textBufferGetInsert buffer
     i <- textBufferGetIterAtMark buffer m
     o <- textIterGetOffset i
-    textBufferInsertAtCursor buffer $ show msg
+    textBufferInsertAtCursor buffer text
     textBufferInsertAtCursor buffer "\n"
     i1 <- textBufferGetIterAtOffset buffer o
     i2 <- textBufferGetIterAtMark buffer m
