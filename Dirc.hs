@@ -5,7 +5,7 @@ import System.IO
 import System.Exit
 import Control.Concurrent
 
-import Graphics.UI.Gtk as Gtk hiding (Event, insertText)
+import Graphics.UI.Gtk as Gtk hiding (Event)
 import Graphics.UI.Gtk.Builder
 
 import Reactive.Util
@@ -36,6 +36,10 @@ main = do
 
     exit <- newEmptyMVar
     esmsg <- newAddHandler
+    esquit <- newAddHandler
+    let handler = tryEvent $ do liftIO $ fire esquit ()
+    closeBtn `on` Gtk.buttonReleaseEvent $ handler
+    dlg `on` Gtk.deleteEvent $ handler
 
     let handleMsg msg = do
             case msg of
@@ -71,15 +75,7 @@ main = do
                 []                  -> textBufferInsertAtCursor buffer "\n"
         handleQuit = putMVar exit ExitSuccess
 
-    let winNetworkDescription :: forall t. Frameworks t => Moment t ()
-        winNetworkDescription = do
-            setupNetwork esmsg (postGUIAsync . handleMsg)
-            eclose <- eventM closeBtn Gtk.buttonReleaseEvent
-            edelete <- eventM dlg Gtk.deleteEvent
-            reactimate $ handleQuit <$ eclose
-            reactimate $ handleQuit <$ edelete
-
-    network <- compile winNetworkDescription
+    network <- compile $ setupNetwork (esmsg, esquit) (postGUIAsync . handleMsg) handleQuit
     actuate network
 
     sChan <- newChan
@@ -93,7 +89,9 @@ main = do
     postGUIAsync mainQuit
     exitWith signal
 
-setupNetwork :: forall t. Frameworks t => EventSource Message -> (Message -> IO ()) -> Moment t ()
-setupNetwork esmsg handleMsg = do
+setupNetwork :: forall t. Frameworks t => (EventSource Message, EventSource ()) -> (Message -> IO ()) -> IO () -> Moment t ()
+setupNetwork (esmsg, esquit) handleMsg handleQuit = do
     emsg <- fromAddHandler (addHandler esmsg)
+    equit <- fromAddHandler (addHandler esquit)
     reactimate $ handleMsg <$> emsg
+    reactimate $ handleQuit <$ equit
