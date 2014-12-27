@@ -19,8 +19,6 @@ data MsgPart = TextIcon String | Text [TextTag] String
 main :: IO ()
 main = do
     initGUI
-    exit <- newEmptyMVar
-    let handleQuit' = handleQuit exit
 
     bld <- builderNew
     builderAddFromFile bld "dirc.glade"
@@ -36,6 +34,7 @@ main = do
     set motdTag [ textTagParagraphBackground := "yellow", textTagForeground := "blue", textTagWeight := 700 ]
     textTagTableAdd tagTbl motdTag
 
+    exit <- newEmptyMVar
     esmsg <- newAddHandler
 
     let handleMsg msg = do
@@ -70,6 +69,7 @@ main = do
                                           applyTags tags
                                           insertMsg ms
                 []                  -> textBufferInsertAtCursor buffer "\n"
+        handleQuit = putMVar exit ExitSuccess
 
     let networkDescription :: forall t. Frameworks t => Moment t ()
         networkDescription = do
@@ -78,8 +78,8 @@ main = do
             emsg <- fromAddHandler (addHandler esmsg)
 
             reactimate $ (postGUIAsync . handleMsg) <$> emsg
-            reactimate $ handleQuit' <$ eclose
-            reactimate $ handleQuit' <$ edelete
+            reactimate $ handleQuit <$ eclose
+            reactimate $ handleQuit <$ edelete
     network <- compile networkDescription
     actuate network
 
@@ -93,6 +93,3 @@ main = do
     signal <- takeMVar exit
     postGUIAsync mainQuit
     exitWith signal
-
-handleQuit exit = do
-    putMVar exit ExitSuccess
