@@ -41,7 +41,7 @@ main = do
     closeBtn `on` Gtk.buttonReleaseEvent $ handler
     dlg `on` Gtk.deleteEvent $ handler
 
-    let handleMsg msg = do
+    let handleMsg msg = postGUIAsync $ do
             case msg of
                 (Notice sender "AUTH" text)          -> insertMsg [TextIcon "icon-auth.svg", Text [fontTag] text]
                 (Notice sender nickname text)        -> insertMsg [TextIcon "icon-info.svg", Text [fontTag] text]
@@ -75,7 +75,7 @@ main = do
                 []                  -> textBufferInsertAtCursor buffer "\n"
         handleQuit = putMVar exit ExitSuccess
 
-    network <- compile $ setupNetwork (esmsg, esquit) (postGUIAsync . handleMsg) handleQuit
+    network <- compile $ setupNetwork (esmsg, esquit) handleMsg handleQuit
     actuate network
 
     sChan <- newChan
