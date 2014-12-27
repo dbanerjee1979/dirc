@@ -14,6 +14,7 @@ import Reactive.Banana.Gtk
 
 import IrcServer as S
 import IrcMessage as M
+
 data MsgPart = TextIcon String | Text [TextTag] String
 
 main :: IO ()
