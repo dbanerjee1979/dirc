@@ -71,16 +71,15 @@ main = do
                 []                  -> textBufferInsertAtCursor buffer "\n"
         handleQuit = putMVar exit ExitSuccess
 
-    let networkDescription :: forall t. Frameworks t => Moment t ()
-        networkDescription = do
+    let winNetworkDescription :: forall t. Frameworks t => Moment t ()
+        winNetworkDescription = do
+            setupNetwork esmsg (postGUIAsync . handleMsg)
             eclose <- eventM closeBtn Gtk.buttonReleaseEvent
             edelete <- eventM dlg Gtk.deleteEvent
-            emsg <- fromAddHandler (addHandler esmsg)
-
-            reactimate $ (postGUIAsync . handleMsg) <$> emsg
             reactimate $ handleQuit <$ eclose
             reactimate $ handleQuit <$ edelete
-    network <- compile networkDescription
+
+    network <- compile winNetworkDescription
     actuate network
 
     sChan <- newChan
@@ -93,3 +92,8 @@ main = do
     signal <- takeMVar exit
     postGUIAsync mainQuit
     exitWith signal
+
+setupNetwork :: forall t. Frameworks t => EventSource Message -> (Message -> IO ()) -> Moment t ()
+setupNetwork esmsg handleMsg = do
+    emsg <- fromAddHandler (addHandler esmsg)
+    reactimate $ handleMsg <$> emsg
