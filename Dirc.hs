@@ -28,9 +28,12 @@ main = do
     msgTxt <- builderGetObject bld castToTextView "message-text"
     buffer <- textViewGetBuffer msgTxt
     tagTbl <- textBufferGetTagTable buffer
-    tag <- textTagNew Nothing
-    set tag [ textTagFont := "Courier 12" ]
-    textTagTableAdd tagTbl tag
+    fontTag <- textTagNew Nothing
+    set fontTag [ textTagFont := "Courier 12" ]
+    textTagTableAdd tagTbl fontTag
+    motdTag <- textTagNew Nothing
+    set motdTag [ textTagParagraphBackground := "yellow", textTagForeground := "blue", textTagWeight := 700 ]
+    textTagTableAdd tagTbl motdTag
 
     esmsg <- newAddHandler
 
@@ -40,7 +43,7 @@ main = do
             edelete <- eventM dlg Gtk.deleteEvent
             emsg <- fromAddHandler (addHandler esmsg)
 
-            reactimate $ (postGUIAsync . handleMsg buffer tag) <$> emsg
+            reactimate $ (postGUIAsync . handleMsg buffer fontTag motdTag) <$> emsg
             reactimate $ handleQuit' <$ eclose
             reactimate $ handleQuit' <$ edelete
     network <- compile networkDescription
@@ -60,44 +63,43 @@ main = do
 handleQuit exit = do
     putMVar exit ExitSuccess
 
-handleMsg :: TextBufferClass self => self -> TextTag -> Message -> IO ()
-handleMsg buffer tag (Notice sender "AUTH" text) = insertTextWithIcon buffer tag "icon-auth.svg" text
-handleMsg buffer tag (Notice sender nickname text) = insertTextWithIcon buffer tag "icon-info.svg" text
-handleMsg buffer tag (Generic sender nickname text) = insertText buffer tag text
-handleMsg buffer tag (Welcome sender nickname text) = insertText buffer tag text
-handleMsg buffer tag (YourHost sender nickname text) = insertText buffer tag text
-handleMsg buffer tag (Created sender nickname text) = insertText buffer tag text
-handleMsg buffer tag (MyInfo sender nickname server version availUserModes availChanModes) = return ()
+data MsgPart = TextIcon String | Text [TextTag] String
 
-handleMsg buffer tag msg = do
-    m <- textBufferGetInsert buffer
-    i <- textBufferGetIterAtMark buffer m
-    o <- textIterGetOffset i
-    textBufferInsertAtCursor buffer $ show msg
-    textBufferInsertAtCursor buffer "\n"
-    i1 <- textBufferGetIterAtOffset buffer o
-    i2 <- textBufferGetIterAtMark buffer m
-    textBufferApplyTag buffer tag i1 i2
+handleMsg :: TextBufferClass self => self -> TextTag -> TextTag -> Message -> IO ()
+handleMsg buffer fontTag motdTag (Notice sender "AUTH" text) = insertMsg buffer [TextIcon "icon-auth.svg", Text [fontTag] text]
+handleMsg buffer fontTag motdTag (Notice sender nickname text) = insertMsg buffer [TextIcon "icon-info.svg", Text [fontTag] text]
+handleMsg buffer fontTag motdTag (Generic sender nickname text) = insertMsg buffer [Text [fontTag] text]
+handleMsg buffer fontTag motdTag (Welcome sender nickname text) = insertMsg buffer [Text [fontTag] text]
+handleMsg buffer fontTag motdTag (YourHost sender nickname text) = insertMsg buffer [Text [fontTag] text]
+handleMsg buffer fontTag motdTag (Created sender nickname text) = insertMsg buffer [Text [fontTag] text]
+handleMsg buffer fontTag motdTag (MotD sender nickname text) = insertMsg buffer [Text [fontTag, motdTag] text]
+handleMsg buffer fontTag motdTag (MotDStart sender nickname text) = insertMsg buffer [Text [fontTag, motdTag] " "]
+handleMsg buffer fontTag motdTag (MotDEnd sender nickname text) = insertMsg buffer [Text [fontTag, motdTag] " "]
+handleMsg buffer fontTag motdTag msg = putStrLn $ show msg
 
-insertTextWithIcon buffer tag icon text = do
+insertMsg buffer (TextIcon icon:ms) = do
     b <- pixbufNewFromFile icon
     m <- textBufferGetInsert buffer
     i <- textBufferGetIterAtMark buffer m
-    o <- textIterGetOffset i
     textBufferInsertPixbuf buffer i b
     textBufferInsertAtCursor buffer " "
-    textBufferInsertAtCursor buffer text
-    textBufferInsertAtCursor buffer "\n"
-    i1 <- textBufferGetIterAtOffset buffer o
-    i2 <- textBufferGetIterAtMark buffer m
-    textBufferApplyTag buffer tag i1 i2
+    insertMsg buffer ms
 
-insertText buffer tag text = do
+insertMsg buffer (Text tags text:ms) = do
     m <- textBufferGetInsert buffer
     i <- textBufferGetIterAtMark buffer m
     o <- textIterGetOffset i
     textBufferInsertAtCursor buffer text
-    textBufferInsertAtCursor buffer "\n"
     i1 <- textBufferGetIterAtOffset buffer o
     i2 <- textBufferGetIterAtMark buffer m
-    textBufferApplyTag buffer tag i1 i2
+    applyTags buffer tags i1 i2
+    insertMsg buffer ms
+
+insertMsg buffer [] = do
+    textBufferInsertAtCursor buffer "\n"
+
+applyTags buffer (t:ts) i1 i2 = do
+    textBufferApplyTag buffer t i1 i2
+    applyTags buffer ts i1 i2
+applyTags buffer [] i1 i2 = do
+    return ()
