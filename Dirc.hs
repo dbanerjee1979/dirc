@@ -83,6 +83,7 @@ main = do
     S.startServer "irc.dal.net" 7000 esmsg sChan
     writeChan sChan M.Nick { nickname = "dbanerjee1979" }
     writeChan sChan M.User { username = "guest", modeMask = 0, realname = "Joe" }
+    writeChan sChan M.Join { channel = "#cafechat" }
 
     widgetShowAll dlg
     forkOS mainGUI

@@ -19,6 +19,8 @@ import Data.List
 
 data Message = Nick { nickname :: String }
                | User           { username :: String, modeMask :: Int, realname :: String }
+               | List
+               | Join           { channel :: String }
                | Notice         { sender :: Maybe String, target :: String, text :: String }
                | Mode           { sender :: Maybe String, nickname :: String, mode :: String }
                | Generic        { sender :: Maybe String, target :: String, text :: String }
@@ -40,6 +42,8 @@ data ParseToken = Sender String | Command String | Param String
 generate :: Message -> String
 generate (Nick nickname)                 = makeMsg ["NICK", nickname]
 generate (User user modeMask realname)   = makeMsg ["USER", user, (show modeMask), "*", realname]
+generate (List)                          = makeMsg ["LIST"]
+generate (Join channel)                  = makeMsg ["JOIN", channel]
 
 makeMsg :: [String] -> String
 makeMsg (midP:termP:[]) = midP ++ " :" ++ termP ++ "\r\n"
