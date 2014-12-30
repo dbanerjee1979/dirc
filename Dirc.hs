@@ -80,10 +80,10 @@ main = do
     actuate network
 
     sChan <- newChan
-    S.startServer "irc.dal.net" 7000 esmsg sChan
+    S.startServer "irc.freenode.net" 6665 esmsg sChan
     writeChan sChan M.Nick { nickname = "dbanerjee1979" }
     writeChan sChan M.User { username = "guest", modeMask = 0, realname = "Joe" }
-    writeChan sChan M.Join { channel = "#cafechat" }
+    writeChan sChan M.Join { channel = "#haskell" }
 
     widgetShowAll dlg
     forkOS mainGUI
