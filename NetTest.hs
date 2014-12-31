@@ -17,7 +17,8 @@ import Text.Parsec.Combinator
 main :: IO ()
 main = do
     let hints = defaultHints { addrFlags = [ AI_ADDRCONFIG, AI_CANONNAME ] }
-    addrs <- getAddrInfo (Just hints) (Just "chat.freenode.net") (Just $ "6665")
+    --addrs <- getAddrInfo (Just hints) (Just "chat.freenode.net") (Just $ "6665")
+    addrs <- getAddrInfo (Just hints) (Just "irc.dal.net") (Just $ "7000")
     let addr = head addrs
     s <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
     connect s (addrAddress addr)
@@ -40,17 +41,20 @@ readLoop h = do
     putStrLn $ show $ parseMsg m
     readLoop h
 
-data IrcMessage = Prefix String (Maybe String) (Maybe String) | Command String | Param String
+data IrcMessage = Prefix String (Maybe String) (Maybe String) | Command String | Param [IrcText]
                   deriving (Show)
+
+data IrcText = Bold | Italic | Underlined | Reverse | Reset | Foreground Int | Background Int | Text String
+               deriving (Show)
 
 parseMsg input = parse ircMessage "(unknown)" input
 
-ircMessage = do char ':' 
-                prefix <- prefix
-                command <- command
-                return $ prefix:command
+ircMessage = (do char ':'
+                 prefix <- prefix
+                 command <- command
+                 return $ prefix:command) <|> command
 
-prefix = do prefix <- many segment 
+prefix = do prefix <- many segment
             user <- many (char '!' >> many segment)
             host <- many (char '@' >> many segment)
             return $ Prefix prefix (listToMaybe user) (listToMaybe host)
@@ -64,9 +68,29 @@ command = do cmd <- many (letter <|> digit)
 param = char ' ' >> (trailing <|> middle)
 
 trailing = do char ':' 
-              param <- manyTill anyChar $ try $ char '\r'
-              return $ Param param
+              text <- parseText
+              char '\r'
+              return $ Param $ concat text
 
 middle = do c <- noneOf " :"
             cs <- many (char ':' <|> noneOf " :")
-            return $ Param (c:cs)
+            return $ Param $ [Text (c:cs)]
+
+parseText = many $ (do char '\x0002'
+                       return [Bold])
+                   <|> (do char '\x001D'
+                           return [Italic])
+                   <|> (do char '\x001F'
+                           return [Underlined])
+                   <|> (do char '\x0016'
+                           return [Reverse])
+                   <|> (do char '\x000F'
+                           return [Reset])
+                   <|> (do char '\x0003'
+                           foreground <- many digit
+                           background <- many $ char ',' >> many digit
+                           return $ concat [[Foreground $ toColorNum foreground], (map (Background . toColorNum) background)])
+                   <|> (do cs <- many1 $ noneOf "\x0002\x001D\x001F\x0016\x000F\x0003\r"
+                           return $ [Text cs])
+
+toColorNum s = if length s == 0 then 0 else (read s :: Int)
