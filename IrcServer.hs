@@ -5,6 +5,7 @@ module IrcServer
 
 import Network.Socket hiding (recv)
 import System.IO
+import qualified System.IO.UTF8 as U
 import Control.Concurrent
 import Reactive.Util as R
 import IrcMessage as M
@@ -28,7 +29,7 @@ address hostname port = do
 
 reader :: Handle -> EventSource Message -> IO ()
 reader h esmsg = do
-    l <- hGetLine h
+    l <- U.hGetLine h
     case M.parseMsg l of
         Left m  -> putStrLn m
         Right m -> fire esmsg m
