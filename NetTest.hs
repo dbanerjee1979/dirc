@@ -4,20 +4,20 @@ import qualified Data.ByteString as B
 import Numeric
 import Data.Char
 import Data.Word
+import Data.Maybe
 import Control.Concurrent
 import Network.Socket hiding (recv)
 import System.IO
 import qualified System.IO.UTF8 as U
-import IrcMessage as M
 import IrcServer as S
-import Reactive.Util as R
-import Reactive.Banana as R
-import Reactive.Banana.Frameworks as R
+import Text.ParserCombinators.Parsec
+import Text.Parsec.Char
+import Text.Parsec.Combinator
 
 main :: IO ()
 main = do
     let hints = defaultHints { addrFlags = [ AI_ADDRCONFIG, AI_CANONNAME ] }
-    addrs <- getAddrInfo (Just hints) (Just "irc.dal.net") (Just $ "7000")
+    addrs <- getAddrInfo (Just hints) (Just "chat.freenode.net") (Just $ "6665")
     let addr = head addrs
     s <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
     connect s (addrAddress addr)
@@ -37,39 +37,36 @@ readLoop :: Handle -> IO ()
 readLoop h = do
     m <- U.hGetLine h
     putStrLn m
-    putStrLn $ show $ decode Start m ""
+    putStrLn $ show $ parseMsg m
     readLoop h
 
-data ParseState = Start | Txt | Fg | Bg
+data IrcMessage = Prefix String (Maybe String) (Maybe String) | Command String | Param String
+                  deriving (Show)
 
-data IrcText = Bold | Foreground Int | Background Int | Italic | Underlined | Reverse | Reset | Text String
-     deriving (Show)
+parseMsg input = parse ircMessage "(unknown)" input
 
-readColor s = if length s == 0 then 0 else read s :: Int
+ircMessage = do char ':' 
+                prefix <- prefix
+                command <- command
+                return $ prefix:command
 
-decode :: ParseState -> [Char] -> [Char] -> [IrcText]
-decode Start ('\r':cs) _ = decode Start cs ""
-decode Start ('\0002':cs) _ = Bold:decode Start cs ""
-decode Start ('\0003':cs) _ = decode Fg cs ""
-decode Start ('\0029':cs) _ = Italic:decode Start cs ""
-decode Start ('\0031':cs) _ = Underlined:decode Start cs ""
-decode Start ('\0022':cs) _ = Reverse:decode Start cs ""
-decode Start ('\0015':cs) _ = Reset:decode Start cs ""
-decode Start (c:cs) accum = decode Txt cs [c]
-decode Start [] _ = []
+prefix = do prefix <- many segment 
+            user <- many (char '!' >> many segment)
+            host <- many (char '@' >> many segment)
+            return $ Prefix prefix (listToMaybe user) (listToMaybe host)
 
-decode Fg (c:cs) accum | isDigit c = decode Fg cs $ accum ++ [c]
-                       | c == ',' = Foreground (readColor accum):decode Bg cs ""
-                       | otherwise = Foreground (readColor accum):decode Start (c:cs) ""
-decode Bg (c:cs) accum | isDigit c = decode Bg cs $ accum ++ [c]
-                       | otherwise = Background (readColor accum):decode Start (c:cs) ""
+segment = noneOf "!@ "
 
-decode Txt ('\r':cs) accum = decode Txt cs accum
-decode Txt ('\0002':cs) accum = Text accum:Bold:decode Start cs ""
-decode Txt ('\0003':cs) accum = Text accum:decode Fg cs ""
-decode Txt ('\0029':cs) accum = Text accum:Italic:decode Start cs ""
-decode Txt ('\0031':cs) accum = Text accum:Underlined:decode Start cs ""
-decode Txt ('\0022':cs) accum = Text accum:Reverse:decode Start cs ""
-decode Txt ('\0015':cs) accum = Text accum:decode Start cs ""
-decode Txt (c:cs) accum = decode Txt cs $ accum ++ [c]
-decode Txt [] accum = [Text accum]
+command = do cmd <- many (letter <|> digit)
+             params <- many param
+             return $ (Command cmd):params
+
+param = char ' ' >> (trailing <|> middle)
+
+trailing = do char ':' 
+              param <- manyTill anyChar $ try $ char '\r'
+              return $ Param param
+
+middle = do c <- noneOf " :"
+            cs <- many (char ':' <|> noneOf " :")
+            return $ Param (c:cs)

@@ -29,9 +29,9 @@ address hostname port = do
 reader :: Handle -> EventSource Message -> IO ()
 reader h esmsg = do
     l <- hGetLine h
-    case M.parse l of
-        Nothing -> putStrLn $ "Unable to parse response " ++ l
-        Just m -> fire esmsg m
+    case M.parseMsg l of
+        Left m  -> putStrLn m
+        Right m -> fire esmsg m
     reader h esmsg
 
 writer :: Handle -> Chan Message -> IO ()
