@@ -87,10 +87,10 @@ parseText = many $ (do char '\x0002'
                    <|> (do char '\x000F'
                            return [Reset])
                    <|> (do char '\x0003'
-                           foreground <- many digit
-                           background <- many $ char ',' >> many digit
-                           return $ concat [[Foreground $ toColorNum foreground], (map (Background . toColorNum) background)])
+                           foregroundNum <- many $ many1 digit
+                           backgroundNum <- many $ char ',' >> many1 digit
+                           let toForeground ns = map (Foreground . read) ns
+                               toBackground ns = map (Background . read) ns
+                           return $ concat [toForeground foregroundNum, toBackground backgroundNum])
                    <|> (do cs <- many1 $ noneOf "\x0002\x001D\x001F\x0016\x000F\x0003\r"
                            return $ [Text cs])
-
-toColorNum s = if length s == 0 then 0 else (read s :: Int)
