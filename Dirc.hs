@@ -60,8 +60,8 @@ main = do
 
     let mkColorMap f = foldM (\m (k, v) -> f k v m) Map.empty $ zip [0..] colors
 
-    fgColorMap <- mkColorMap (insertTag textTagForeground)
-    bgColorMap <- mkColorMap (insertTag textTagBackground)
+    fgColorMap <- mkColorMap $ insertTag textTagForeground
+    bgColorMap <- mkColorMap $ insertTag textTagBackground
 
     exit <- newEmptyMVar
     esmsg <- newAddHandler
