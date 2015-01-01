@@ -21,10 +21,11 @@ import Text.ParserCombinators.Parsec as P
 import Text.Parsec.Char
 import Text.Parsec.Combinator
 
-data Message = Nick { nickname :: String }
+data Message = Nick { sender :: Maybe String, nickname :: String }
                | User           { username :: String, modeMask :: Int, realname :: String }
                | List           { channelFilter :: Maybe String }
-               | Join           { channel :: String }
+               | Join           { sender :: Maybe String, channel :: String }
+               | Quit           { sender :: Maybe String, msg :: [IrcText] }
                | Notice         { sender :: Maybe String, target :: String, msg :: [IrcText] }
                | Mode           { sender :: Maybe String, nickname :: String, mode :: String }
                | Generic        { sender :: Maybe String, target :: String, msg :: [IrcText] }
@@ -38,6 +39,12 @@ data Message = Nick { nickname :: String }
                | MotDEnd        { sender :: Maybe String, target :: String, msg :: [IrcText] }
                | MotDNone       { sender :: Maybe String, target :: String, msg :: [IrcText] }
                | Channel        { sender :: Maybe String, target :: String, channel :: String, visible :: String, msg :: [IrcText] }
+               | Topic          { sender :: Maybe String, channel :: String, topic :: [IrcText] }
+               | Names          { sender :: Maybe String, chanStat :: String, channel :: String, names :: [String] }
+               | NamesEnd       { sender :: Maybe String, target :: String, channel :: String }
+               | PrivMsg        { sender :: Maybe String, target :: String, msg :: [IrcText] }
+               | Ping           { target :: String }
+               | Pong           { sender :: Maybe String, target :: String }
                deriving (Show)
 
 data IrcText = Bold | Italic | Underlined | Reverse | Reset | Foreground Int | Background Int | Text String
@@ -47,10 +54,11 @@ data ParseToken = Sender String (Maybe String) (Maybe String) | Command String |
                   deriving (Show)
 
 generate :: Message -> String
-generate (Nick nickname)                 = makeMsg ["NICK", nickname]
+generate (Nick sender nickname)          = makeMsg ["NICK", nickname]
 generate (User user modeMask realname)   = makeMsg ["USER", user, (show modeMask), "*", realname]
 generate (List channelFilter)            = makeMsg $ "LIST":(maybeToList channelFilter)
-generate (Join channel)                  = makeMsg ["JOIN", channel]
+generate (Join sender channel)           = makeMsg ["JOIN", channel]
+generate (Pong sender target)            = makeMsg ["PONG", target]
 
 makeMsg :: [String] -> String
 makeMsg (midP:termP:[]) = midP ++ " :" ++ termP ++ "\r\n"
@@ -64,6 +72,11 @@ parseMsg :: String -> Either String Message
 parseMsg input = case p of
     Right (Sender s _ _:Command "NOTICE":Param target:Param text:[])                 -> Right $ Notice         { sender = (Just s), target = target, msg = parseText $ text }
     Right (Sender s _ _:Command   "MODE":Param nickname:Param mode:[])               -> Right $ Mode           { sender = (Just s), nickname = nickname, mode = mode }
+    Right (Sender s _ _:Command   "JOIN":Param channel:[])                           -> Right $ Join           { sender = (Just s), channel = channel }
+    Right (Sender s _ _:Command   "QUIT":Param text:[])                              -> Right $ Quit           { sender = (Just s), msg = parseText $ text }
+    Right (Sender s _ _:Command   "NICK":Param nickname:[])                          -> Right $ Nick           { sender = (Just s), nickname = nickname }
+    Right (Sender s _ _:Command "PRIVMSG":Param target:Param text:[])                -> Right $ PrivMsg        { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Command   "PING":Param target:[])                                         -> Right $ Ping           { target = target }
     Right (Sender s _ _:Command    "001":Param target:Param text:[])                 -> Right $ Welcome        { sender = (Just s), target = target, msg = parseText $ text }
     Right (Sender s _ _:Command    "002":Param target:Param text:[])                 -> Right $ YourHost       { sender = (Just s), target = target, msg = parseText $ text }
     Right (Sender s _ _:Command    "003":Param target:Param text:[])                 -> Right $ Created        { sender = (Just s), target = target, msg = parseText $ text }
@@ -86,6 +99,13 @@ parseMsg input = case p of
                                         :Param visible:Param topic:[])               -> Right $ Channel        { sender = (Just s), target = target, channel = channel, visible = visible
                                                                                                                , msg = parseText $ topic
                                                                                                                }
+    Right (Sender s _ _:Command    "332":Param target:Param channel
+                                        :Param topic:[])                             -> Right $ Topic          { sender = (Just s), channel = channel, topic = parseText $ topic }
+    Right (Sender s _ _:Command    "353":Param target:Param chanStat:Param channel
+                                        :Param names:[])                             -> Right $ Names          { sender = (Just s), chanStat = chanStat, channel = channel
+                                                                                                               , names = words names 
+                                                                                                               }
+    Right (Sender s _ _:Command    "366":Param target:Param channel:Param text:[])   -> Right $ NamesEnd       { sender = (Just s), target = target, channel = channel }
     Left error                                                                       -> Left $ show error
     _                                                                                -> Left $ "Unable to parse " ++ input ++ "\n (parse: " ++ (show p) ++ ")"
     where p = parse ircMessage "(unknown)" input

@@ -17,7 +17,7 @@ startServer hostname port esmsg sendChan = do
     connect s (addrAddress a)
     h <- socketToHandle s ReadWriteMode
     hSetBuffering h NoBuffering
-    forkIO (reader h esmsg)
+    forkIO (reader h esmsg sendChan)
     forkIO (writer h sendChan)
     return ()
 
@@ -27,14 +27,16 @@ address hostname port = do
     addrs <- getAddrInfo (Just hints) (Just hostname) (Just $ show port)
     return $ head addrs
 
-reader :: Handle -> EventSource Message -> IO ()
-reader h esmsg = do
+reader :: Handle -> EventSource Message -> Chan Message -> IO ()
+reader h esmsg sendChan = do
     l <- U.hGetLine h
     case M.parseMsg l of
         Left m  -> putStrLn m
         Right m -> do putStrLn $ show m
-                      fire esmsg m
-    reader h esmsg
+                      case m of
+                          Ping tgt -> writeChan sendChan (Pong Nothing tgt)
+                          _        -> fire esmsg m
+    reader h esmsg sendChan
 
 writer :: Handle -> Chan Message -> IO ()
 writer h sendChan = do
