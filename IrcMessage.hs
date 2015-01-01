@@ -23,20 +23,21 @@ import Text.Parsec.Combinator
 
 data Message = Nick { nickname :: String }
                | User           { username :: String, modeMask :: Int, realname :: String }
-               | List
+               | List           { channelFilter :: Maybe String }
                | Join           { channel :: String }
                | Notice         { sender :: Maybe String, target :: String, msg :: [IrcText] }
                | Mode           { sender :: Maybe String, nickname :: String, mode :: String }
-               | Generic        { sender :: Maybe String, target :: String, text :: String }
-               | Welcome        { sender :: Maybe String, target :: String, text :: String }
-               | YourHost       { sender :: Maybe String, target :: String, text :: String }
-               | Created        { sender :: Maybe String, target :: String, text :: String }
+               | Generic        { sender :: Maybe String, target :: String, msg :: [IrcText] }
+               | Welcome        { sender :: Maybe String, target :: String, msg :: [IrcText] }
+               | YourHost       { sender :: Maybe String, target :: String, msg :: [IrcText] }
+               | Created        { sender :: Maybe String, target :: String, msg :: [IrcText] }
                | MyInfo         { sender :: Maybe String, target :: String, server :: String, version :: String, availUserModes :: String, availChanModes :: String }
                | Bounce         { sender :: Maybe String, target :: String, text :: String }
-               | MotDStart      { sender :: Maybe String, target :: String, text :: String }
-               | MotD           { sender :: Maybe String, target :: String, text :: String }
-               | MotDEnd        { sender :: Maybe String, target :: String, text :: String }
-               | MotDNone       { sender :: Maybe String, target :: String, text :: String }
+               | MotDStart      { sender :: Maybe String, target :: String, msg :: [IrcText] }
+               | MotD           { sender :: Maybe String, target :: String, msg :: [IrcText] }
+               | MotDEnd        { sender :: Maybe String, target :: String, msg :: [IrcText] }
+               | MotDNone       { sender :: Maybe String, target :: String, msg :: [IrcText] }
+               | Channel        { sender :: Maybe String, target :: String, channel :: String, visible :: String, msg :: [IrcText] }
                deriving (Show)
 
 data IrcText = Bold | Italic | Underlined | Reverse | Reset | Foreground Int | Background Int | Text String
@@ -48,7 +49,7 @@ data ParseToken = Sender String (Maybe String) (Maybe String) | Command String |
 generate :: Message -> String
 generate (Nick nickname)                 = makeMsg ["NICK", nickname]
 generate (User user modeMask realname)   = makeMsg ["USER", user, (show modeMask), "*", realname]
-generate (List)                          = makeMsg ["LIST"]
+generate (List channelFilter)            = makeMsg $ "LIST":(maybeToList channelFilter)
 generate (Join channel)                  = makeMsg ["JOIN", channel]
 
 makeMsg :: [String] -> String
@@ -63,24 +64,28 @@ parseMsg :: String -> Either String Message
 parseMsg input = case p of
     Right (Sender s _ _:Command "NOTICE":Param target:Param text:[])                 -> Right $ Notice         { sender = (Just s), target = target, msg = parseText $ text }
     Right (Sender s _ _:Command   "MODE":Param nickname:Param mode:[])               -> Right $ Mode           { sender = (Just s), nickname = nickname, mode = mode }
-    Right (Sender s _ _:Command    "001":Param target:Param text:[])                 -> Right $ Welcome        { sender = (Just s), target = target, text = text }
-    Right (Sender s _ _:Command    "002":Param target:Param text:[])                 -> Right $ YourHost       { sender = (Just s), target = target, text = text }
-    Right (Sender s _ _:Command    "003":Param target:Param text:[])                 -> Right $ Created        { sender = (Just s), target = target, text = text }
+    Right (Sender s _ _:Command    "001":Param target:Param text:[])                 -> Right $ Welcome        { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Sender s _ _:Command    "002":Param target:Param text:[])                 -> Right $ YourHost       { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Sender s _ _:Command    "003":Param target:Param text:[])                 -> Right $ Created        { sender = (Just s), target = target, msg = parseText $ text }
     Right (Sender s _ _:Command    "004":Param target:Param servername
                                         :Param version:Param availUserModes
                                         :Param availChanModes:[])                    -> Right $ MyInfo         { sender = (Just s), target = target, server = servername, version = version
                                                                                                                , availUserModes = availUserModes, availChanModes = availChanModes
                                                                                                                }
     Right (Sender s _ _:Command    "005":Param target:Param text:[])                 -> Right $ Bounce         { sender = (Just s), target = target, text = text }
-    Right (Sender s _ _:Command    "251":Param target:Param text:[])                 -> Right $ Generic        { sender = (Just s), target = target, text = text }
-    Right (Sender s _ _:Command    "252":Param target:Param cnt:Param text:[])       -> Right $ Generic        { sender = (Just s), target = target, text = cnt ++ " " ++ text }
-    Right (Sender s _ _:Command    "253":Param target:Param cnt:Param text:[])       -> Right $ Generic        { sender = (Just s), target = target, text = cnt ++ " " ++ text }
-    Right (Sender s _ _:Command    "254":Param target:Param cnt:Param text:[])       -> Right $ Generic        { sender = (Just s), target = target, text = cnt ++ " " ++ text }
-    Right (Sender s _ _:Command    "255":Param target:Param text:[])                 -> Right $ Generic        { sender = (Just s), target = target, text = text }
-    Right (Sender s _ _:Command    "375":Param target:Param text:[])                 -> Right $ MotDStart      { sender = (Just s), target = target, text = text }
-    Right (Sender s _ _:Command    "372":Param target:Param text:[])                 -> Right $ MotD           { sender = (Just s), target = target, text = text }
-    Right (Sender s _ _:Command    "376":Param target:Param text:[])                 -> Right $ MotDEnd        { sender = (Just s), target = target, text = text }
-    Right (Sender s _ _:Command    "422":Param target:Param text:[])                 -> Right $ MotDNone       { sender = (Just s), target = target, text = text }
+    Right (Sender s _ _:Command    "251":Param target:Param text:[])                 -> Right $ Generic        { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Sender s _ _:Command    "252":Param target:Param cnt:Param text:[])       -> Right $ Generic        { sender = (Just s), target = target, msg = parseText $ cnt ++ " " ++ text }
+    Right (Sender s _ _:Command    "253":Param target:Param cnt:Param text:[])       -> Right $ Generic        { sender = (Just s), target = target, msg = parseText $ cnt ++ " " ++ text }
+    Right (Sender s _ _:Command    "254":Param target:Param cnt:Param text:[])       -> Right $ Generic        { sender = (Just s), target = target, msg = parseText $ cnt ++ " " ++ text }
+    Right (Sender s _ _:Command    "255":Param target:Param text:[])                 -> Right $ Generic        { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Sender s _ _:Command    "375":Param target:Param text:[])                 -> Right $ MotDStart      { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Sender s _ _:Command    "372":Param target:Param text:[])                 -> Right $ MotD           { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Sender s _ _:Command    "376":Param target:Param text:[])                 -> Right $ MotDEnd        { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Sender s _ _:Command    "422":Param target:Param text:[])                 -> Right $ MotDNone       { sender = (Just s), target = target, msg = parseText $ text }
+    Right (Sender s _ _:Command    "322":Param target:Param channel
+                                        :Param visible:Param topic:[])               -> Right $ Channel        { sender = (Just s), target = target, channel = channel, visible = visible
+                                                                                                               , msg = parseText $ topic
+                                                                                                               }
     Left error                                                                       -> Left $ show error
     _                                                                                -> Left $ "Unable to parse " ++ input ++ "\n (parse: " ++ (show p) ++ ")"
     where p = parse ircMessage "(unknown)" input
@@ -131,10 +136,10 @@ formattedText = do cs <- many $ (do char '\x0002'
                                     return [Reset])
                             <|> (do char '\x0003'
                                     foregroundNum <- many $ many1 digit
-                                    backgroundNum <- many $ char ',' >> many1 digit
+                                    backgroundNum <- many $ char ',' >> many digit
                                     let toForeground ns = map (Foreground . read) ns
                                         toBackground ns = map (Background . read) ns
-                                    return $ concat [toForeground foregroundNum, toBackground backgroundNum])
+                                    return $ concat [toForeground foregroundNum, toBackground $ filter (not . null) backgroundNum])
                             <|> (do cs <- many1 $ noneOf "\x0002\x001D\x001F\x0016\x000F\x0003\r"
                                     return $ [Text cs])
                    return $ concat cs

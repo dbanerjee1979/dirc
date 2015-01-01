@@ -35,7 +35,7 @@ main = do
     set fontTag [ textTagFont := "Courier 12" ]
     textTagTableAdd tagTbl fontTag
     motdTag <- textTagNew Nothing
-    set motdTag [ textTagParagraphBackground := "yellow", textTagWeight := 700 ]
+    set motdTag [ textTagWeight := 700 ]
     textTagTableAdd tagTbl motdTag
     boldTag <- textTagNew Nothing
     set boldTag [ textTagWeight := 700 ]
@@ -45,44 +45,44 @@ main = do
     textTagTableAdd tagTbl ulTag
     italicTag <- textTagNew Nothing
     set italicTag [ textTagStyle := StyleItalic ]
-    textTagTableAdd tagTbl italicTag
-
-    let fgColor name = do tag <- textTagNew Nothing
-                          set tag [ textTagForeground := name ]
-                          textTagTableAdd tagTbl tag
-                          return tag
-    fgColor0 <- fgColor "white"
-    fgColor1 <- fgColor "black"
-    fgColor2 <- fgColor "navy"
-    fgColor3 <- fgColor "green"
-    fgColor4 <- fgColor "red"
-    fgColor5 <- fgColor "brown"
-    fgColor6 <- fgColor "purple"
-    fgColor7 <- fgColor "olive drab"
-    fgColor8 <- fgColor "yellow"
-    fgColor9 <- fgColor "lime green"
-    fgColor10 <- fgColor "turquoise4"
-    fgColor11 <- fgColor "cyan1"
-    fgColor12 <- fgColor "blue"
-    fgColor13 <- fgColor "magenta"
-    fgColor14 <- fgColor "gray55"
-    fgColor15 <- fgColor "gray90"
-    fgColor16 <- fgColor "white"
+    textTagTableAdd tagTbl italicTag 
+    
+    let fgColor (r, g, b) = do tag <- textTagNew Nothing
+                               set tag [ textTagForegroundGdk := Color r g b ]
+                               textTagTableAdd tagTbl tag
+                               return tag
+    fgColor0 <- fgColor (255, 255, 255)
+    fgColor1 <- fgColor (0, 0, 0)
+    fgColor2 <- fgColor (0, 0, 128)
+    fgColor3 <- fgColor (0, 128, 0)
+    fgColor4 <- fgColor (255, 0, 0)
+    fgColor5 <- fgColor (128, 64, 64)
+    fgColor6 <- fgColor (128, 0, 255)
+    fgColor7 <- fgColor (128, 128, 0)
+    fgColor8 <- fgColor (255, 255, 0)
+    fgColor9 <- fgColor (0, 255, 0)
+    fgColor10 <- fgColor (0, 128, 128)
+    fgColor11 <- fgColor (0, 255, 255)
+    fgColor12 <- fgColor (0, 0, 255)
+    fgColor13 <- fgColor (255, 0, 255)
+    fgColor14 <- fgColor (128, 128, 128)
+    fgColor15 <- fgColor (192, 192, 192)
+    fgColor16 <- fgColor (255, 255, 255)
     let fgColorMap = Map.fromList [ (0, fgColor0)
-                                  , (1, fgColor1)
-                                  , (2, fgColor2)
-                                  , (3, fgColor3)
-                                  , (4, fgColor4)
+                                  , (1, fgColor1) 
+                                  , (2, fgColor2) 
+                                  , (3, fgColor3) 
+                                  , (4, fgColor4) 
                                   , (5, fgColor5)
-                                  , (6, fgColor6)
-                                  , (7, fgColor7)
+                                  , (6, fgColor6) 
+                                  , (7, fgColor7) 
                                   , (8, fgColor8)
                                   , (9, fgColor9)
                                   , (10, fgColor10)
                                   , (11, fgColor11)
-                                  , (12, fgColor12)
-                                  , (13, fgColor13)
-                                  , (14, fgColor14)
+                                  , (12, fgColor12) 
+                                  , (13, fgColor13) 
+                                  , (14, fgColor14) 
                                   , (15, fgColor15)
                                   , (16, fgColor16)
                                   ]
@@ -91,38 +91,38 @@ main = do
                           set tag [ textTagBackground := name ]
                           textTagTableAdd tagTbl tag
                           return tag
-    bgColor0 <- bgColor "white"
-    bgColor1 <- bgColor "black"
-    bgColor2 <- bgColor "navy"
-    bgColor3 <- bgColor "green"
-    bgColor4 <- bgColor "red"
-    bgColor5 <- bgColor "brown"
-    bgColor6 <- bgColor "purple"
-    bgColor7 <- bgColor "olive drab"
-    bgColor8 <- bgColor "yellow"
-    bgColor9 <- bgColor "lime green"
-    bgColor10 <- bgColor "turquoise4"
-    bgColor11 <- bgColor "cyan1"
-    bgColor12 <- bgColor "blue"
-    bgColor13 <- bgColor "magenta"
-    bgColor14 <- bgColor "gray55"
-    bgColor15 <- bgColor "gray90"
-    bgColor16 <- bgColor "white"
+    bgColor0 <- bgColor (255, 255, 255)
+    bgColor1 <- bgColor (0, 0, 0)
+    bgColor2 <- bgColor (0, 0, 128)
+    bgColor3 <- bgColor (0, 128, 0)
+    bgColor4 <- bgColor (255, 0, 0)
+    bgColor5 <- bgColor (128, 64, 64)
+    bgColor6 <- bgColor (128, 0, 255)
+    bgColor7 <- bgColor (128, 128, 0)
+    bgColor8 <- bgColor (255, 255, 0)
+    bgColor9 <- bgColor (0, 255, 0)
+    bgColor10 <- bgColor (0, 128, 128)
+    bgColor11 <- bgColor (0, 255, 255)
+    bgColor12 <- bgColor (0, 0, 255)
+    bgColor13 <- bgColor (255, 0, 255)
+    bgColor14 <- bgColor (128, 128, 128)
+    bgColor15 <- bgColor (192, 192, 192)
+    bgColor16 <- bgColor (255, 255, 255)
     let bgColorMap = Map.fromList [ (0, bgColor0)
-                                  , (1, bgColor1)
-                                  , (2, bgColor2)
-                                  , (3, bgColor3)
-                                  , (4, bgColor4)
+                                  , (1, bgColor1) 
+                                  , (2, bgColor2) 
+                                  , (3, bgColor3) 
+                                  , (4, bgColor4) 
                                   , (5, bgColor5)
-                                  , (6, bgColor6)
-                                  , (7, bgColor7)
+                                  , (6, bgColor6) 
+                                  , (7, bgColor7) 
                                   , (8, bgColor8)
                                   , (9, bgColor9)
                                   , (10, bgColor10)
                                   , (11, bgColor11)
-                                  , (12, bgColor12)
-                                  , (13, bgColor13)
-                                  , (14, bgColor14)
+                                  , (12, bgColor12) 
+                                  , (13, bgColor13) 
+                                  , (14, bgColor14) 
                                   , (15, bgColor15)
                                   , (16, bgColor16)
                                   ]
@@ -136,9 +136,9 @@ main = do
 
     let toMsg :: [Int] -> [TextTag] -> [IrcText] -> [MsgPart]
         toMsg []           tags (Text text:ms)    = (MsgText tags text:toMsg [] tags ms)
-        toMsg (fgc:bgc:[]) tags (Text text:ms)    = let fgTag = maybeToList $ Map.lookup fgc fgColorMap
-                                                        bgTag = maybeToList $ Map.lookup bgc bgColorMap
-                                                    in (MsgText (concat [fgTag, bgTag, tags]) text:toMsg [fgc, bgc] tags ms)
+        toMsg (fgc:bgc:[]) tags (Text text:ms)    = let fgTag = fromJust $ Map.lookup fgc fgColorMap
+                                                        bgTag = fromJust $ Map.lookup bgc bgColorMap
+                                                    in (MsgText (fgTag:bgTag:tags) text:toMsg [fgc, bgc] tags ms)
         toMsg colors tags (Bold:ms)               = toMsg colors (boldTag:tags) ms
         toMsg colors tags (Underlined:ms)         = toMsg colors (ulTag:tags) ms
         toMsg colors tags (Italic:ms)             = toMsg colors (italicTag:tags) ms
@@ -150,16 +150,15 @@ main = do
 
     let handleMsg msg = postGUIAsync $ do
             case msg of
-                (Notice sender target text)                 -> insertMsg (MsgIcon "icon-info.svg":toMsg [1, 0] [fontTag] text)
-                (Generic sender nickname text)              -> insertMsg $ toMsg [1, 0] [fontTag] text
-                (Welcome sender nickname text)              -> insertMsg $ toMsg [1, 0] [fontTag] text
-                (YourHost sender nickname text)             -> insertMsg $ toMsg [1, 0] [fontTag] text
-                (Created sender nickname text)              -> insertMsg $ toMsg [1, 0] [fontTag] text
-                (MotD sender nickname text)                 -> insertMsg $ toMsg [2, 8] [fontTag, motdTag] text
-                (MotDStart sender nickname text)            -> insertMsg $ toMsg [2, 8] [fontTag, motdTag] [Text " "]
-                (MotDEnd sender nickname text)              -> insertMsg $ toMsg [2, 8] [fontTag, motdTag] [Text " "]
-                (Channel sender target channel _ topic)     -> insertMsg $ MsgText [fontTag] (channel ++ ": "):toMsg [1, 0] [fontTag] topic
-                msg                                         -> putStrLn $ show msg
+                (Notice sender target text)          -> insertMsg (MsgIcon "icon-info.svg":toMsg [1, 0] [fontTag] text)
+                (Generic sender nickname text)       -> insertMsg $ toMsg [1, 0] [fontTag] text
+                (Welcome sender nickname text)       -> insertMsg $ toMsg [1, 0] [fontTag] text
+                (YourHost sender nickname text)      -> insertMsg $ toMsg [1, 0] [fontTag] text
+                (Created sender nickname text)       -> insertMsg $ toMsg [1, 0] [fontTag] text
+                (MotD sender nickname text)          -> insertMsg $ toMsg [2, 8] [fontTag, motdTag] text
+                (MotDStart sender nickname text)     -> insertMsg $ toMsg [2, 8] [fontTag, motdTag] [Text " "]
+                (MotDEnd sender nickname text)       -> insertMsg $ toMsg [2, 8] [fontTag, motdTag] [Text " "]
+                msg                                  -> putStrLn $ show msg
         insertMsg msg = do
             m <- textBufferGetInsert buffer
             i <- textBufferGetIterAtMark buffer m
@@ -184,11 +183,10 @@ main = do
     actuate network
 
     sChan <- newChan
-    --S.startServer "irc.freenode.net" 6665 esmsg sChan
-    S.startServer "irc.dal.net" 7000 esmsg sChan
+    S.startServer "irc.freenode.net" 6665 esmsg sChan
     writeChan sChan M.Nick { nickname = "dbanerjee1979" }
     writeChan sChan M.User { username = "guest", modeMask = 0, realname = "Joe" }
-    writeChan sChan M.List { channelFilter = Nothing }
+    writeChan sChan M.Join { channel = "#haskell" }
 
     widgetShowAll dlg
     forkOS mainGUI

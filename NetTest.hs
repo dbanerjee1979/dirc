@@ -16,6 +16,8 @@ import Text.Parsec.Combinator
 
 main :: IO ()
 main = do
+    --putStrLn $ show $ parseMsg ":halcyon.il.us.dal.net 322 dbanerjee1979 #personal 6 :\ETX0,\r"
+    putStrLn $ show $ parseMsg ":halcyon.il.us.dal.net 322 dbanerjee1979 #personal 6 :\ETX0,\ETX7 WELCOMEl  Aye Ishq Humain Barbad Na Kar .. Barbad Na kar..\r"
     let hints = defaultHints { addrFlags = [ AI_ADDRCONFIG, AI_CANONNAME ] }
     --addrs <- getAddrInfo (Just hints) (Just "chat.freenode.net") (Just $ "6665")
     addrs <- getAddrInfo (Just hints) (Just "irc.dal.net") (Just $ "7000")
@@ -88,9 +90,9 @@ parseText = many $ (do char '\x0002'
                            return [Reset])
                    <|> (do char '\x0003'
                            foregroundNum <- many $ many1 digit
-                           backgroundNum <- many $ char ',' >> many1 digit
+                           backgroundNum <- many $ char ',' >> many digit
                            let toForeground ns = map (Foreground . read) ns
                                toBackground ns = map (Background . read) ns
-                           return $ concat [toForeground foregroundNum, toBackground backgroundNum])
+                           return $ concat [toForeground foregroundNum, toBackground $ filter (not . null) backgroundNum])
                    <|> (do cs <- many1 $ noneOf "\x0002\x001D\x001F\x0016\x000F\x0003\r"
                            return $ [Text cs])

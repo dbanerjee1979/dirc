@@ -32,7 +32,8 @@ reader h esmsg = do
     l <- U.hGetLine h
     case M.parseMsg l of
         Left m  -> putStrLn m
-        Right m -> fire esmsg m
+        Right m -> do putStrLn $ show m
+                      fire esmsg m
     reader h esmsg
 
 writer :: Handle -> Chan Message -> IO ()
