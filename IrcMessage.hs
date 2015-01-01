@@ -10,6 +10,7 @@
 module IrcMessage
     (
       Message(..)
+    , IrcText(..)
     , parseMsg
     , generate
     ) where
@@ -24,7 +25,7 @@ data Message = Nick { nickname :: String }
                | User           { username :: String, modeMask :: Int, realname :: String }
                | List
                | Join           { channel :: String }
-               | Notice         { sender :: Maybe String, target :: String, text :: String }
+               | Notice         { sender :: Maybe String, target :: String, msg :: [IrcText] }
                | Mode           { sender :: Maybe String, nickname :: String, mode :: String }
                | Generic        { sender :: Maybe String, target :: String, text :: String }
                | Welcome        { sender :: Maybe String, target :: String, text :: String }
@@ -36,6 +37,9 @@ data Message = Nick { nickname :: String }
                | MotD           { sender :: Maybe String, target :: String, text :: String }
                | MotDEnd        { sender :: Maybe String, target :: String, text :: String }
                | MotDNone       { sender :: Maybe String, target :: String, text :: String }
+               deriving (Show)
+
+data IrcText = Bold | Italic | Underlined | Reverse | Reset | Foreground Int | Background Int | Text String
                deriving (Show)
 
 data ParseToken = Sender String (Maybe String) (Maybe String) | Command String | Param String
@@ -57,7 +61,7 @@ paramT p = ":" ++ p
 
 parseMsg :: String -> Either String Message
 parseMsg input = case p of
-    Right (Sender s _ _:Command "NOTICE":Param target:Param text:[])                 -> Right $ Notice         { sender = (Just s), target = target, text = text }
+    Right (Sender s _ _:Command "NOTICE":Param target:Param text:[])                 -> Right $ Notice         { sender = (Just s), target = target, msg = parseText $ text }
     Right (Sender s _ _:Command   "MODE":Param nickname:Param mode:[])               -> Right $ Mode           { sender = (Just s), nickname = nickname, mode = mode }
     Right (Sender s _ _:Command    "001":Param target:Param text:[])                 -> Right $ Welcome        { sender = (Just s), target = target, text = text }
     Right (Sender s _ _:Command    "002":Param target:Param text:[])                 -> Right $ YourHost       { sender = (Just s), target = target, text = text }
@@ -108,3 +112,29 @@ trailing = do char ':'
 middle = do c <- noneOf "\n\r :"
             cs <- many (char ':' <|> noneOf "\n\r :")
             return $ Param (c:cs)
+
+parseText :: String -> [IrcText]
+parseText input = case p of
+                      Left _    -> [Text input]
+                      Right msg -> msg
+                  where p = parse formattedText "(unknown)" input
+
+formattedText = do cs <- many $ (do char '\x0002'
+                                    return [Bold])
+                            <|> (do char '\x001D'
+                                    return [Italic])
+                            <|> (do char '\x001F'
+                                    return [Underlined])
+                            <|> (do char '\x0016'
+                                    return [Reverse])
+                            <|> (do char '\x000F'
+                                    return [Reset])
+                            <|> (do char '\x0003'
+                                    foregroundNum <- many $ many1 digit
+                                    backgroundNum <- many $ char ',' >> many1 digit
+                                    let toForeground ns = map (Foreground . read) ns
+                                        toBackground ns = map (Background . read) ns
+                                    return $ concat [toForeground foregroundNum, toBackground backgroundNum])
+                            <|> (do cs <- many1 $ noneOf "\x0002\x001D\x001F\x0016\x000F\x0003\r"
+                                    return $ [Text cs])
+                   return $ concat cs

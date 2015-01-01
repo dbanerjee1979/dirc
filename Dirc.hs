@@ -15,7 +15,7 @@ import Reactive.Banana.Gtk
 import IrcServer as S
 import IrcMessage as M
 
-data MsgPart = TextIcon String | Text [TextTag] String
+data MsgPart = MsgIcon String | MsgText [TextTag] String
 
 main :: IO ()
 main = do
@@ -42,38 +42,38 @@ main = do
     closeBtn `on` Gtk.buttonReleaseEvent $ handler
     dlg `on` Gtk.deleteEvent $ handler
 
+    let toMsg (Text text:ms) = (MsgText [fontTag] text:toMsg ms)
+        toMsg []             = []
+
     let handleMsg msg = postGUIAsync $ do
             case msg of
-                (Notice sender "AUTH" text)          -> insertMsg [TextIcon "icon-auth.svg", Text [fontTag] text]
-                (Notice sender nickname text)        -> insertMsg [TextIcon "icon-info.svg", Text [fontTag] text]
-                (Generic sender nickname text)       -> insertMsg [Text [fontTag] text]
-                (Welcome sender nickname text)       -> insertMsg [Text [fontTag] text]
-                (YourHost sender nickname text)      -> insertMsg [Text [fontTag] text]
-                (Created sender nickname text)       -> insertMsg [Text [fontTag] text]
-                (MotD sender nickname text)          -> insertMsg [Text [fontTag, motdTag] text]
-                (MotDStart sender nickname text)     -> insertMsg [Text [fontTag, motdTag] " "]
-                (MotDEnd sender nickname text)       -> insertMsg [Text [fontTag, motdTag] " "]
+                (Notice sender target text)          -> insertMsg (MsgIcon "icon-info.svg":toMsg text)
+                (Generic sender nickname text)       -> insertMsg [MsgText [fontTag] text]
+                (Welcome sender nickname text)       -> insertMsg [MsgText [fontTag] text]
+                (YourHost sender nickname text)      -> insertMsg [MsgText [fontTag] text]
+                (Created sender nickname text)       -> insertMsg [MsgText [fontTag] text]
+                (MotD sender nickname text)          -> insertMsg [MsgText [fontTag, motdTag] text]
+                (MotDStart sender nickname text)     -> insertMsg [MsgText [fontTag, motdTag] " "]
+                (MotDEnd sender nickname text)       -> insertMsg [MsgText [fontTag, motdTag] " "]
                 msg                                  -> putStrLn $ show msg
         insertMsg msg = do
             m <- textBufferGetInsert buffer
             i <- textBufferGetIterAtMark buffer m
             case msg of
-                (TextIcon icon:ms) ->  do b <- pixbufNewFromFile icon
-                                          textBufferInsertPixbuf buffer i b
-                                          textBufferInsertAtCursor buffer " "
-                                          insertMsg ms
-                (Text tags text:ms) -> do o <- textIterGetOffset i
-                                          textBufferInsertAtCursor buffer text
-                                          i1 <- textBufferGetIterAtOffset buffer o
-                                          i2 <- textBufferGetIterAtMark buffer m
-                                          let applyTags tags =
-                                                  case tags of
-                                                      (t:ts) -> do textBufferApplyTag buffer t i1 i2
-                                                                   applyTags ts
-                                                      []     -> do return ()
-                                          applyTags tags
-                                          insertMsg ms
-                []                  -> textBufferInsertAtCursor buffer "\n"
+                (MsgIcon icon:ms)      -> do b <- pixbufNewFromFile icon
+                                             textBufferInsertPixbuf buffer i b
+                                             textBufferInsertAtCursor buffer " "
+                                             insertMsg ms
+                (MsgText tags text:ms) -> do o <- textIterGetOffset i
+                                             textBufferInsertAtCursor buffer text
+                                             i1 <- textBufferGetIterAtOffset buffer o
+                                             i2 <- textBufferGetIterAtMark buffer m
+                                             let applyTags (t:ts) = do textBufferApplyTag buffer t i1 i2
+                                                                       applyTags ts
+                                                 applyTags []     = do return ()
+                                             applyTags tags
+                                             insertMsg ms
+                []                     -> textBufferInsertAtCursor buffer "\n"
         handleQuit = putMVar exit ExitSuccess
 
     network <- compile $ setupNetwork (esmsg, esquit) handleMsg handleQuit
