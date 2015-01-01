@@ -4,6 +4,7 @@ import Network.Socket
 import System.IO
 import System.Exit
 import Control.Concurrent
+import Control.Monad
 import Data.Maybe
 import Data.Word
 import qualified Data.Map.Strict as Map
@@ -47,85 +48,20 @@ main = do
     set italicTag [ textTagStyle := StyleItalic ]
     textTagTableAdd tagTbl italicTag
 
-    let fgColor name = do tag <- textTagNew Nothing
-                          set tag [ textTagForeground := name ]
-                          textTagTableAdd tagTbl tag
-                          return tag
-    fgColor0 <- fgColor "white"
-    fgColor1 <- fgColor "black"
-    fgColor2 <- fgColor "navy"
-    fgColor3 <- fgColor "green"
-    fgColor4 <- fgColor "red"
-    fgColor5 <- fgColor "brown"
-    fgColor6 <- fgColor "purple"
-    fgColor7 <- fgColor "olive drab"
-    fgColor8 <- fgColor "yellow"
-    fgColor9 <- fgColor "lime green"
-    fgColor10 <- fgColor "turquoise4"
-    fgColor11 <- fgColor "cyan1"
-    fgColor12 <- fgColor "blue"
-    fgColor13 <- fgColor "magenta"
-    fgColor14 <- fgColor "gray55"
-    fgColor15 <- fgColor "gray90"
-    fgColor16 <- fgColor "white"
-    let fgColorMap = Map.fromList [ (0, fgColor0)
-                                  , (1, fgColor1)
-                                  , (2, fgColor2)
-                                  , (3, fgColor3)
-                                  , (4, fgColor4)
-                                  , (5, fgColor5)
-                                  , (6, fgColor6)
-                                  , (7, fgColor7)
-                                  , (8, fgColor8)
-                                  , (9, fgColor9)
-                                  , (10, fgColor10)
-                                  , (11, fgColor11)
-                                  , (12, fgColor12)
-                                  , (13, fgColor13)
-                                  , (14, fgColor14)
-                                  , (15, fgColor15)
-                                  , (16, fgColor16)
-                                  ]
+    let colors = [ "white", "black", "navy", "green", "red", "brown"
+                 , "purple", "olive drab", "yellow", "lime green", "turquoise4"
+                 , "cyan1", "blue", "magenta", "gray55", "gray90", "white"
+                 ]
 
-    let bgColor name = do tag <- textTagNew Nothing
-                          set tag [ textTagBackground := name ]
-                          textTagTableAdd tagTbl tag
-                          return tag
-    bgColor0 <- bgColor "white"
-    bgColor1 <- bgColor "black"
-    bgColor2 <- bgColor "navy"
-    bgColor3 <- bgColor "green"
-    bgColor4 <- bgColor "red"
-    bgColor5 <- bgColor "brown"
-    bgColor6 <- bgColor "purple"
-    bgColor7 <- bgColor "olive drab"
-    bgColor8 <- bgColor "yellow"
-    bgColor9 <- bgColor "lime green"
-    bgColor10 <- bgColor "turquoise4"
-    bgColor11 <- bgColor "cyan1"
-    bgColor12 <- bgColor "blue"
-    bgColor13 <- bgColor "magenta"
-    bgColor14 <- bgColor "gray55"
-    bgColor15 <- bgColor "gray90"
-    bgColor16 <- bgColor "white"
-    let bgColorMap = Map.fromList [ (0, bgColor0)
-                                  , (1, bgColor1)
-                                  , (2, bgColor2)
-                                  , (3, bgColor3)
-                                  , (4, bgColor4)
-                                  , (5, bgColor5)
-                                  , (6, bgColor6)
-                                  , (7, bgColor7)
-                                  , (8, bgColor8)
-                                  , (9, bgColor9)
-                                  , (10, bgColor10)
-                                  , (11, bgColor11)
-                                  , (12, bgColor12)
-                                  , (13, bgColor13)
-                                  , (14, bgColor14)
-                                  , (15, bgColor15)
-                                  , (16, bgColor16)
-                                  ]
+    let insertTag attr num name map = do tag <- textTagNew Nothing
+                                         set tag [ attr := name ]
+                                         textTagTableAdd tagTbl tag
+                                         return $ Map.insert num tag map
+
+    let mkColorMap f = foldM (\m (k, v) -> f k v m) Map.empty $ zip [0..] colors
+
+    fgColorMap <- mkColorMap (insertTag textTagForeground)
+    bgColorMap <- mkColorMap (insertTag textTagBackground)
 
     exit <- newEmptyMVar
     esmsg <- newAddHandler
