@@ -42,16 +42,26 @@
           </packing>
         </child>
         <child>
-          <object class="GtkScrolledWindow" id="scroll-window">
+          <object class="GtkNotebook" id="message-tabs">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="shadow_type">in</property>
             <child>
-              <object class="GtkTextView" id="message-text">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="editable">False</property>
-              </object>
+              <placeholder/>
+            </child>
+            <child type="tab">
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child type="tab">
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child type="tab">
+              <placeholder/>
             </child>
           </object>
           <packing>

@@ -25,11 +25,18 @@ main :: IO ()
 main = do
     initGUI
 
+    bldWnd <- builderNew
+    builderAddFromFile bldWnd "dirc.glade"
     bld <- builderNew
-    builderAddFromFile bld "dirc.glade"
-    dlg <- builderGetObject bld castToWindow "main-dialog"
-    closeBtn <- builderGetObject bld castToButton "close-button"
+    builderAddFromFile bld "server.glade"
+
+    dlg <- builderGetObject bldWnd castToWindow "main-dialog"
+    closeBtn <- builderGetObject bldWnd castToButton "close-button"
+    msgTabs <- builderGetObject bldWnd castToNotebook "message-tabs"
+    msgPage <- builderGetObject bld castToBox "server-page"
     msgTxt <- builderGetObject bld castToTextView "message-text"
+    notebookAppendPage msgTabs msgPage "Server"
+
     buffer <- textViewGetBuffer msgTxt
     tagTbl <- textBufferGetTagTable buffer
     fontTag <- textTagNew Nothing
